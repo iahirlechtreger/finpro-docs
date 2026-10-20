@@ -40,6 +40,19 @@ img{max-width:100%}
 .nav-cta{margin-left:auto;background:var(--accent);color:#fff;font-size:13px;font-weight:600;padding:7px 13px;border-radius:8px}
 .theme{margin-left:14px;border:1px solid var(--line);background:transparent;color:var(--muted);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:14px}
 .menu-btn{display:none;place-items:center;width:32px;height:32px;border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:8px;cursor:pointer;font-size:16px}
+.side-top{display:flex;align-items:center;gap:8px;margin:0 0 6px}
+.side-home{flex:1;text-align:left;border:0;background:transparent;font-family:var(--sans);
+  color:var(--muted);font-size:13.5px;font-weight:600;padding:7px 10px;border-radius:7px;cursor:pointer}
+.side-home:hover{background:var(--accent-soft);color:var(--fg)}
+.side-theme{flex:none;border:1px solid var(--line);background:transparent;color:var(--muted);
+  width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:14px}
+.side-theme:hover{color:var(--fg);border-color:var(--accent)}
+/* modo embebido (dentro de Finpro): sin cabecera propia */
+.floatmenu{display:none;position:fixed;top:calc(10px + env(safe-area-inset-top,0px));left:10px;z-index:30;
+  width:36px;height:36px;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:9px;cursor:pointer;place-items:center;font-size:17px}
+.embedded .nav{display:none}
+.embedded .body{height:100%}
+@media(max-width:620px){.embedded .floatmenu{display:grid}}
 
 .body{display:grid;grid-template-columns:300px minmax(0,1fr);height:calc(100% - 53px)}
 .side{border-right:1px solid var(--line);overflow:auto;padding:16px 12px 48px;background:var(--panel)}
@@ -165,8 +178,8 @@ details.acc[open] summary::before{content:"▾ "}
   <button class="menu-btn" id="menuBtn" aria-label="Menú">☰</button>
   <div class="brand"><span class="logo">F</span>Finpro</div>
   <a class="nav-cta" href="https://app.finpro.com.ar" target="_blank" rel="noopener">Ir a Finpro</a>
-  <button class="theme" id="themeBtn" aria-label="Cambiar tema">◐</button>
 </div>
+<button class="floatmenu" id="floatMenu" aria-label="Menú">☰</button>
 <div class="body">
   <nav class="side" id="side"></nav>
   <main class="main" id="main"><div class="wrap" id="wrap"></div></main>
@@ -179,6 +192,10 @@ let current=DATA.start, currentSec=null;
 
 function renderSide(){
   const side=document.getElementById("side");side.innerHTML="";
+  const top=document.createElement("div");top.className="side-top";
+  const home=document.createElement("button");home.className="side-home";home.textContent="Inicio";home.onclick=()=>openPage("home");
+  const th=document.createElement("button");th.className="side-theme";th.setAttribute("aria-label","Cambiar tema");th.textContent="◐";th.onclick=toggleTheme;
+  top.appendChild(home);top.appendChild(th);side.appendChild(top);
   NAV.forEach(([g,items])=>{
     const grp=document.createElement("div");grp.className="grp";
     const h=document.createElement("h4");
@@ -287,13 +304,15 @@ document.getElementById("main").addEventListener("scroll",()=>{
   for(const s of secs){if(s.getBoundingClientRect().top<150)act=s;}
   if(act){currentSec=act.id;markSub();}
 });
-document.getElementById("themeBtn").onclick=()=>{
+function toggleTheme(){
   const r=document.documentElement;
   const dark=r.getAttribute("data-theme")==="dark"||(!r.getAttribute("data-theme")&&matchMedia("(prefers-color-scheme:dark)").matches);
   r.setAttribute("data-theme",dark?"light":"dark");
-};
+}
 document.getElementById("menuBtn").onclick=()=>document.getElementById("side").classList.toggle("open");
 document.querySelector(".brand").onclick=()=>openPage("home");
+document.getElementById("floatMenu").onclick=()=>document.getElementById("side").classList.toggle("open");
+try{if(window.self!==window.top)document.documentElement.classList.add("embedded");}catch(e){document.documentElement.classList.add("embedded");}
 renderSide();renderMain();
 </script>
 </body>
