@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es" data-theme="">
+<html lang="es" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -55,7 +55,22 @@ img{max-width:100%}
 @media(max-width:620px){.embedded .floatmenu{display:grid}}
 
 .body{display:grid;grid-template-columns:300px minmax(0,1fr);height:calc(100% - 53px)}
-.side{border-right:1px solid var(--line);overflow:auto;padding:16px 12px 48px;background:var(--panel)}
+.side{overflow:auto;padding:16px 12px 48px;
+  background:linear-gradient(168deg,#1b2a66 0%,#2b2c84 55%,#3b2f86 100%);
+  border-right:1px solid rgba(255,255,255,.08);
+  --sfg:#eef1fb; --smuted:#bcc2e6; --sfaint:#9298cb; --shover:rgba(255,255,255,.10);
+  color:var(--sfg)}
+/* menú lateral sobre el azul de Finpro */
+.side .side-home{color:var(--smuted)}
+.side .side-home:hover{background:var(--shover);color:#fff}
+.side .grp>h4{color:#fff}
+.side .chev{color:var(--sfaint)}
+.side .pg>.row{color:var(--smuted)}
+.side .pg>.row:hover{background:var(--shover);color:#fff}
+.side .pg.active>.row{color:#fff;font-weight:600}
+.side .sub{color:var(--smuted);border-left-color:transparent}
+.side .sub:hover{background:var(--shover);color:#fff}
+.side .sub.on{color:#fff;border-color:#fff;font-weight:600;background:var(--shover)}
 .chev{display:inline-block;color:var(--faint);font-size:10px;transition:transform .15s;width:12px;text-align:center}
 .grp.closed>.pages{display:none}
 .grp.closed>h4 .chev{transform:rotate(-90deg)}
@@ -192,10 +207,6 @@ let current=DATA.start, currentSec=null;
 
 function renderSide(){
   const side=document.getElementById("side");side.innerHTML="";
-  const top=document.createElement("div");top.className="side-top";
-  const home=document.createElement("button");home.className="side-home";home.textContent="Inicio";home.onclick=()=>openPage("home");
-  const th=document.createElement("button");th.className="side-theme";th.setAttribute("aria-label","Cambiar tema");th.textContent="◐";th.onclick=toggleTheme;
-  top.appendChild(home);top.appendChild(th);side.appendChild(top);
   NAV.forEach(([g,items])=>{
     const grp=document.createElement("div");grp.className="grp";
     const h=document.createElement("h4");
