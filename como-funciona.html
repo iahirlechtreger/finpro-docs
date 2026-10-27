@@ -1,0 +1,476 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Finpro: Cuentas, API y avisos</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: una lámina por pantalla, navegación por flechas/teclado; cada lámina entra como secuencia animada y los flujos se muestran con trazos que se dibujan y puntos que viajan. Dark-first (identidad Finpro). */
+:root{
+  --bg:#0b1220; --bg-2:#111a2e; --card:#172238; --line:#273350;
+  --fg:#eef2fa; --muted:#9aa7c2; --violet:#8b7cf6; --violet-soft:rgba(139,124,246,.16);
+  --green:#3ddc97; --green-soft:rgba(61,220,151,.14); --amber:#f2b749;
+  --display:'Poppins',system-ui,sans-serif; --body:'Inter',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --step:.42s;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){
+  --bg:#f3f5fb; --bg-2:#ffffff; --card:#ffffff; --line:#d8deec; --fg:#0f172a; --muted:#56637f;
+  --violet:#5b4bd6; --violet-soft:rgba(91,75,214,.12); --green:#128a5c; --green-soft:rgba(18,138,92,.12); --amber:#b57d12; color-scheme:light } }
+:root[data-theme="light"]{
+  --bg:#f3f5fb; --bg-2:#ffffff; --card:#ffffff; --line:#d8deec; --fg:#0f172a; --muted:#56637f;
+  --violet:#5b4bd6; --violet-soft:rgba(91,75,214,.12); --green:#128a5c; --green-soft:rgba(18,138,92,.12); --amber:#b57d12; color-scheme:light }
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.5;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 24px;border-bottom:1px solid var(--line);background:var(--bg-2)}
+.brand{font-family:var(--display);font-weight:700;letter-spacing:.02em;display:flex;align-items:center;gap:10px}
+.brand i{width:10px;height:10px;border-radius:3px;background:linear-gradient(135deg,var(--violet),var(--green));display:inline-block}
+.brand small{font-family:var(--body);font-weight:500;color:var(--muted);font-size:13px}
+.counter{font-family:var(--mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+.deck{flex:1;position:relative;overflow:hidden}
+.slide{position:absolute;inset:0;overflow-y:auto;padding:28px 24px 96px;opacity:0;transform:translateX(24px);transition:opacity .35s ease,transform .35s ease;pointer-events:none}
+.slide.active{opacity:1;transform:none;pointer-events:auto}
+.slide.prev{transform:translateX(-24px)}
+.wrap{max-width:1040px;margin:0 auto;display:grid;gap:22px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--violet)}
+h1{font-family:var(--display);font-weight:600;font-size:clamp(26px,4vw,40px);line-height:1.15;margin:4px 0 0;text-wrap:balance}
+.lead{font-size:clamp(16px,1.6vw,19px);max-width:62ch;color:var(--fg);margin:0}
+.lead strong{color:var(--green);font-weight:600}
+.figure{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;overflow-x:auto;position:relative}
+.figure svg{display:block;width:100%;height:auto;max-width:900px;margin:0 auto;overflow:visible}
+.replay{position:absolute;top:10px;right:10px;font-family:var(--mono);font-size:11.5px;color:var(--muted);background:var(--bg-2);border:1px solid var(--line);border-radius:8px;padding:5px 9px;cursor:pointer}
+.replay:hover{color:var(--fg);border-color:var(--violet)}
+.replay:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.dev{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;padding:14px 16px;border-radius:12px;background:var(--violet-soft);border:1px solid var(--line)}
+.dev .tag{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--violet);padding-top:3px;white-space:nowrap}
+.dev p{margin:0;font-size:15px;color:var(--fg);min-width:0}
+.dev code{font-family:var(--mono);font-size:13.5px;background:var(--bg);padding:1px 6px;border-radius:5px;border:1px solid var(--line)}
+.fields{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
+.fields li{font-family:var(--mono);font-size:13px;padding:6px 10px;border-radius:8px;background:var(--green-soft);border:1px solid var(--line);color:var(--fg)}
+.ref{font-size:13.5px;color:var(--muted);margin:0;padding-top:4px;border-top:1px dashed var(--line)}
+.compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.compare div{padding:14px 16px;border-radius:12px;background:var(--bg-2);border:1px solid var(--line);min-width:0}
+.compare h3{font-family:var(--display);font-weight:600;font-size:15px;margin:0 0 6px}
+.compare h3 span{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-left:8px}
+.compare p{margin:0;font-size:14px;color:var(--fg)}
+.compare .vs{border-color:var(--violet)}
+
+.nav{position:fixed;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;gap:14px;padding:12px 24px calc(12px + env(safe-area-inset-bottom,0px));background:var(--bg-2);border-top:1px solid var(--line)}
+.nav button{font-family:var(--body);font-weight:600;font-size:14px;color:var(--fg);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 16px;cursor:pointer}
+.nav button:hover{border-color:var(--violet)}
+.nav button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.nav button[disabled]{opacity:.35;cursor:default}
+.dots{display:flex;gap:8px}
+.dots button{width:10px;height:10px;padding:0;border-radius:50%;background:var(--line);border:0}
+.dots button.on{background:var(--green)}
+.hint{font-family:var(--mono);font-size:12px;color:var(--muted);display:none}
+@media (min-width:700px){.hint{display:block;position:absolute;right:24px}}
+
+/* SVG tokens */
+svg text{font-family:var(--body);fill:var(--fg);font-size:13px}
+svg .t-mono{font-family:var(--mono);font-size:11.5px;fill:var(--muted)}
+svg .t-title{font-family:var(--display);font-weight:600;font-size:14px}
+svg .t-muted{fill:var(--muted);font-size:12px}
+svg .t-green{fill:var(--green);font-family:var(--mono);font-size:11.5px}
+svg .t-violet{fill:var(--violet);font-family:var(--mono);font-size:11.5px}
+svg .box{fill:var(--bg-2);stroke:var(--line);stroke-width:1.2}
+svg .box-acc{fill:var(--violet-soft);stroke:var(--violet);stroke-width:1.4}
+svg .box-g{fill:var(--green-soft);stroke:var(--green);stroke-width:1.4}
+svg .ln{stroke:var(--line);stroke-width:1.6;fill:none}
+svg .ln-v{stroke:var(--violet);stroke-width:2;fill:none}
+svg .ln-g{stroke:var(--green);stroke-width:2;fill:none}
+svg .dash{stroke:var(--muted);stroke-width:1.4;stroke-dasharray:6 5;fill:none}
+svg .chip{fill:var(--bg);stroke:var(--line);stroke-width:1}
+svg .hl{fill:var(--green-soft);stroke:var(--green);stroke-width:1}
+svg .dot-v{fill:var(--violet);opacity:0}
+svg .dot-g{fill:var(--green);opacity:0}
+svg .dot-a{fill:var(--amber);opacity:0}
+svg .glow{filter:drop-shadow(0 0 6px currentColor)}
+
+/* Secuencia de entrada: cada elemento con data-step aparece en orden al activar la lámina */
+[data-step]{opacity:0}
+svg [data-step]{transform-box:fill-box;transform-origin:center}
+.play [data-step]{animation:pop .5s cubic-bezier(.2,.8,.2,1) forwards;animation-delay:calc(var(--s) * var(--step))}
+@keyframes pop{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
+/* trazos que se dibujan */
+.draw{stroke-dasharray:1;stroke-dashoffset:1}
+.play .draw{animation:draw .7s ease forwards;animation-delay:calc(var(--s) * var(--step))}
+@keyframes draw{to{stroke-dashoffset:0}}
+/* pulso de llegada */
+.play .pulse{animation:pulse 1.6s ease-in-out infinite;animation-delay:calc(var(--s) * var(--step))}
+@keyframes pulse{0%,100%{stroke-width:1.4}50%{stroke-width:3;filter:drop-shadow(0 0 6px var(--green))}}
+.play .pulse-v{animation:pulsev 1.6s ease-in-out infinite;animation-delay:calc(var(--s) * var(--step))}
+@keyframes pulsev{0%,100%{stroke-width:1.2}50%{stroke-width:3;filter:drop-shadow(0 0 6px var(--violet))}}
+
+@media (prefers-reduced-motion:reduce){
+  .slide{transition:none}
+  [data-step],.draw{opacity:1;animation:none!important;stroke-dashoffset:0}
+  .play .pulse,.play .pulse-v{animation:none}
+  svg .dot-v,svg .dot-g,svg .dot-a{display:none}
+}
+</style>
+
+<header class="top">
+  <div class="brand"><i></i>Finpro <small>· Cuentas, API y avisos</small></div>
+  <div class="counter"><span id="cur">1</span> / 5</div>
+</header>
+
+<main class="deck" id="deck">
+
+<!-- L1 -->
+<section class="slide active">
+  <div class="wrap">
+    <div><div class="eyebrow">Lámina 1 · El modelo</div>
+    <h1>Finpro conoce sus Cuentas; sus usuarios son suyos</h1></div>
+    <p class="lead">Usted puede tener varios CVUs y cada uno corresponde a una única <strong>CVU/Cuenta Finpro</strong>. Sus clientes y usuarios finales los gestiona usted, no Finpro.</p>
+    <div class="figure">
+      <button class="replay" type="button">↻ repetir</button>
+      <svg viewBox="0 0 900 300" role="img" aria-label="Diagrama: el Cliente con tres CVU/Cuenta Finpro; los usuarios quedan del lado del cliente">
+        <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs>
+        <!-- cliente -->
+        <g data-step style="--s:0">
+          <rect x="300" y="40" width="560" height="54" rx="10" class="box-acc"/>
+          <text x="580" y="66" text-anchor="middle" class="t-title">Cliente</text>
+          <text x="580" y="84" text-anchor="middle" class="t-mono">su empresa en Finpro</text>
+        </g>
+        <!-- ramas -->
+        <path id="b1" d="M580 94 V120 H390 V150" class="ln draw" pathLength="1" style="--s:1" marker-end="url(#ar)"/>
+        <path id="b2" d="M580 94 V150" class="ln draw" pathLength="1" style="--s:2" marker-end="url(#ar)"/>
+        <path id="b3" d="M580 94 V120 H770 V150" class="ln draw" pathLength="1" style="--s:3" marker-end="url(#ar)"/>
+        <!-- cuentas -->
+        <g data-step style="--s:2">
+          <rect x="300" y="152" width="180" height="96" rx="10" class="box"/>
+          <text x="390" y="180" text-anchor="middle" class="t-title">CVU/Cuenta Finpro</text>
+          <text x="390" y="204" text-anchor="middle" class="t-mono">CVU/CBU · ID Finpro</text>
+          <text x="390" y="230" text-anchor="middle" class="t-muted">1 CVU = 1 Cuenta</text>
+        </g>
+        <g data-step style="--s:3">
+          <rect x="490" y="152" width="180" height="96" rx="10" class="box"/>
+          <text x="580" y="180" text-anchor="middle" class="t-title">CVU/Cuenta Finpro</text>
+          <text x="580" y="204" text-anchor="middle" class="t-mono">CVU/CBU · ID Finpro</text>
+          <text x="580" y="230" text-anchor="middle" class="t-muted">1 CVU = 1 Cuenta</text>
+        </g>
+        <g data-step style="--s:4">
+          <rect x="680" y="152" width="180" height="96" rx="10" class="box"/>
+          <text x="770" y="180" text-anchor="middle" class="t-title">CVU/Cuenta Finpro</text>
+          <text x="770" y="204" text-anchor="middle" class="t-mono">CVU/CBU · ID Finpro</text>
+          <text x="770" y="230" text-anchor="middle" class="t-muted">1 CVU = 1 Cuenta</text>
+        </g>
+        <text x="580" y="282" text-anchor="middle" class="t-muted" data-step style="--s:5">… tantas cuentas como CVUs tenga</text>
+        <!-- usuarios del cliente -->
+        <g data-step style="--s:6">
+          <rect x="20" y="30" width="200" height="240" rx="12" class="dash" fill="none"/>
+          <text x="120" y="56" text-anchor="middle" class="t-title">Sus usuarios</text>
+          <text x="120" y="76" text-anchor="middle" class="t-muted">los gestiona usted</text>
+          <circle cx="70" cy="130" r="14" class="chip"/><circle cx="120" cy="130" r="14" class="chip"/><circle cx="170" cy="130" r="14" class="chip"/>
+          <circle cx="95" cy="180" r="14" class="chip"/><circle cx="145" cy="180" r="14" class="chip"/>
+        </g>
+        <line x1="240" y1="30" x2="240" y2="270" class="dash" data-step style="--s:7"/>
+        <text x="120" y="240" text-anchor="middle" class="t-mono" data-step style="--s:8">Finpro no los conoce</text>
+        <!-- intento de un usuario de "entrar" a Finpro: rebota en la línea -->
+        <circle r="6" class="dot-a glow" data-flow data-at="9" data-dur="1.1" data-path="M170 130 L232 130 L200 130" data-repeat="indefinite"/>
+      </svg>
+    </div>
+    <div class="dev"><span class="tag">Para desarrollo</span>
+      <p>Finpro no tiene la entidad «usuario final». Cada CVU/Cuenta Finpro se identifica por su <code>CVU/CBU</code> y por un <code>ID interno de Finpro</code>; la relación entre sus usuarios y sus CVUs la mantiene su sistema.</p></div>
+  </div>
+</section>
+
+<!-- L2 -->
+<section class="slide">
+  <div class="wrap">
+    <div><div class="eyebrow">Lámina 2 · Credenciales</div>
+    <h1>Las credenciales van por Cliente API, no por cuenta</h1></div>
+    <p class="lead">Cada cuenta que opera por API pertenece a <strong>un Cliente API</strong>. Todas las cuentas de ese Cliente API comparten la misma API Key, el mismo API Secret y la misma configuración de avisos. Si una cuenta necesita una configuración distinta, se crea otro Cliente API. Las cuentas sin Cliente API funcionan igual desde el portal web.</p>
+    <div class="figure">
+      <button class="replay" type="button">↻ repetir</button>
+      <svg viewBox="0 0 900 340" role="img" aria-label="El Cliente Finpro ve todas las cuentas. Un Cliente API agrupa las cuentas A y B con credenciales y avisos compartidos; otro Cliente API tiene la cuenta C con configuración distinta; la cuenta D no tiene Cliente API y opera desde el portal">
+        <defs><marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs>
+        <!-- Cliente Finpro -->
+        <g data-step style="--s:0">
+          <rect x="20" y="14" width="860" height="48" rx="10" class="box-acc"/>
+          <text x="450" y="34" text-anchor="middle" class="t-title">Cliente Finpro</text>
+          <text x="450" y="52" text-anchor="middle" class="t-mono">portal web · ve y opera todas sus cuentas</text>
+        </g>
+        <path d="M210 62 V98" class="ln draw" pathLength="1" style="--s:1" marker-end="url(#ar2)"/>
+        <path d="M540 62 V98" class="ln draw" pathLength="1" style="--s:5" marker-end="url(#ar2)"/>
+        <path d="M780 62 V98" class="ln draw" pathLength="1" style="--s:9" marker-end="url(#ar2)"/>
+        <!-- Cliente API 1 -->
+        <g data-step style="--s:2">
+          <rect x="20" y="100" width="380" height="210" rx="12" class="box"/>
+          <text x="210" y="124" text-anchor="middle" class="t-title">Cliente API 1</text>
+        </g>
+        <g data-step style="--s:3">
+          <rect x="40" y="136" width="165" height="32" rx="8" class="box-acc"/><text x="122" y="156" text-anchor="middle" class="t-violet">API Key + Secret</text>
+          <rect x="215" y="136" width="165" height="32" rx="8" class="box-g"/><text x="297" y="156" text-anchor="middle" class="t-green">avisos: URL 1 / URL 2</text>
+          <text x="210" y="184" text-anchor="middle" class="t-muted">compartidos por todas sus cuentas</text>
+        </g>
+        <g data-step style="--s:4">
+          <rect x="40" y="196" width="160" height="96" rx="10" class="box pulse-v" style="--s:12"/>
+          <text x="120" y="224" text-anchor="middle" class="t-title">CVU/Cuenta A</text>
+          <text x="120" y="246" text-anchor="middle" class="t-mono">CVU/CBU · ID Finpro</text>
+          <text x="120" y="272" text-anchor="middle" class="t-muted">API + portal</text>
+        </g>
+        <g data-step style="--s:4">
+          <rect x="220" y="196" width="160" height="96" rx="10" class="box pulse-v" style="--s:12"/>
+          <text x="300" y="224" text-anchor="middle" class="t-title">CVU/Cuenta B</text>
+          <text x="300" y="246" text-anchor="middle" class="t-mono">CVU/CBU · ID Finpro</text>
+          <text x="300" y="272" text-anchor="middle" class="t-muted">API + portal</text>
+        </g>
+        <!-- Cliente API 2 -->
+        <g data-step style="--s:6">
+          <rect x="420" y="100" width="240" height="210" rx="12" class="box"/>
+          <text x="540" y="124" text-anchor="middle" class="t-title">Cliente API 2</text>
+        </g>
+        <g data-step style="--s:7">
+          <rect x="440" y="136" width="200" height="32" rx="8" class="box-acc"/><text x="540" y="156" text-anchor="middle" class="t-violet">otra API Key + Secret</text>
+          <rect x="440" y="174" width="200" height="32" rx="8" class="box-g"/><text x="540" y="194" text-anchor="middle" class="t-green">otros avisos</text>
+          <text x="540" y="226" text-anchor="middle" class="t-muted">configuración distinta</text>
+        </g>
+        <g data-step style="--s:8">
+          <rect x="440" y="236" width="200" height="56" rx="10" class="box pulse-v" style="--s:12"/>
+          <text x="540" y="259" text-anchor="middle" class="t-title">CVU/Cuenta C</text>
+          <text x="540" y="279" text-anchor="middle" class="t-mono">CVU/CBU · ID Finpro</text>
+        </g>
+        <!-- sin Cliente API -->
+        <g data-step style="--s:10">
+          <rect x="680" y="100" width="200" height="210" rx="12" class="dash"/>
+          <text x="780" y="124" text-anchor="middle" class="t-title">Sin Cliente API</text>
+        </g>
+        <g data-step style="--s:11">
+          <rect x="700" y="196" width="160" height="96" rx="10" class="box"/>
+          <text x="780" y="224" text-anchor="middle" class="t-title">CVU/Cuenta D</text>
+          <text x="780" y="246" text-anchor="middle" class="t-mono">CVU/CBU · ID Finpro</text>
+          <text x="780" y="272" text-anchor="middle" class="t-muted">solo portal web</text>
+          <text x="780" y="160" text-anchor="middle" class="t-muted">sin acceso por API</text>
+        </g>
+        <text x="450" y="332" text-anchor="middle" class="t-muted" data-step style="--s:12">una cuenta pertenece como máximo a un Cliente API</text>
+      </svg>
+    </div>
+    <div class="compare">
+      <div><h3>Cliente Finpro <span>portal web</span></h3><p>Es su empresa en Finpro. Puede tener N cuentas y <strong>ve todas</strong>.</p></div>
+      <div class="vs"><h3>Cliente API <span>integración</span></h3><p>Agrupa 1 o N de esas cuentas bajo una API Key + API Secret y una configuración de avisos. Con esas credenciales <strong>solo se ven y operan las cuentas asociadas</strong>.</p></div>
+    </div>
+    <div class="dev"><span class="tag">Para desarrollo</span>
+      <p>Un Cliente API tiene un único par <code>API Key</code> + <code>API Secret</code> y una única configuración de webhooks, que aplican a todas sus cuentas asociadas. Una cuenta pertenece como máximo a un Cliente API; con esas credenciales solo se listan y operan esas cuentas. Para una configuración distinta en un CVU, se crea otro Cliente API.</p></div>
+  </div>
+</section>
+
+<!-- L3 -->
+<section class="slide">
+  <div class="wrap">
+    <div><div class="eyebrow">Lámina 3 · Acciones</div>
+    <h1>Su sistema actúa sobre cada cuenta</h1></div>
+    <p class="lead">Su sistema opera con las credenciales <strong>del Cliente API</strong> e indica sobre qué cuenta actúa. Solo puede operar las cuentas asociadas a ese Cliente API; para las de otro Cliente API usa las credenciales de ese otro.</p>
+    <div class="figure">
+      <button class="replay" type="button">↻ repetir</button>
+      <svg viewBox="0 0 900 260" role="img" aria-label="El sistema del cliente envía acciones con las credenciales de cada Cliente API; cada Cliente API alcanza solo sus cuentas asociadas">
+        <defs><marker id="arv" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--violet)"/></marker></defs>
+        <g data-step style="--s:0">
+          <rect x="30" y="80" width="220" height="100" rx="12" class="box-acc"/>
+          <text x="140" y="124" text-anchor="middle" class="t-title">Su sistema</text>
+          <text x="140" y="146" text-anchor="middle" class="t-mono">sus usuarios, su lógica</text>
+        </g>
+        <g data-step style="--s:1">
+          <rect x="570" y="24" width="300" height="76" rx="12" class="box pulse-v" style="--s:5"/>
+          <text x="720" y="54" text-anchor="middle" class="t-title">Cliente API 1 → cuentas A y B</text>
+          <text x="720" y="78" text-anchor="middle" class="t-mono">la llamada indica la cuenta por CVU/CBU o ID</text>
+        </g>
+        <g data-step style="--s:1">
+          <rect x="570" y="164" width="300" height="76" rx="12" class="box pulse-v" style="--s:8"/>
+          <text x="720" y="194" text-anchor="middle" class="t-title">Cliente API 2 → cuenta C</text>
+          <text x="720" y="218" text-anchor="middle" class="t-mono">no alcanza a las cuentas A y B</text>
+        </g>
+        <path id="pa" d="M250 112 C 380 112, 420 60, 560 60" class="ln-v draw" pathLength="1" style="--s:2" marker-end="url(#arv)"/>
+        <g data-step style="--s:3"><rect x="330" y="44" width="150" height="26" rx="13" class="chip"/><text x="405" y="61" text-anchor="middle" class="t-violet">credenciales API 1</text></g>
+        <circle r="6" class="dot-v glow" data-flow data-at="4" data-dur="1.4" data-path="M250 112 C 380 112, 420 60, 560 60" data-repeat="indefinite"/>
+        <path id="pb" d="M250 148 C 380 148, 420 200, 560 200" class="ln-v draw" pathLength="1" style="--s:5" marker-end="url(#arv)"/>
+        <g data-step style="--s:6"><rect x="330" y="186" width="150" height="26" rx="13" class="chip"/><text x="405" y="203" text-anchor="middle" class="t-violet">credenciales API 2</text></g>
+        <circle r="6" class="dot-v glow" data-flow data-at="7" data-dur="1.4" data-path="M250 148 C 380 148, 420 200, 560 200" data-repeat="indefinite"/>
+      </svg>
+    </div>
+    <div class="dev"><span class="tag">Para desarrollo</span>
+      <p>Cada llamada usa el par <code>API Key</code> + <code>API Secret</code> del Cliente API e indica la cuenta por CVU/CBU o ID interno. Con esas credenciales solo se listan y operan las cuentas asociadas a ese Cliente API; no hay una credencial que alcance a todas las cuentas del Cliente Finpro.</p></div>
+  </div>
+</section>
+
+<!-- L4 -->
+<section class="slide">
+  <div class="wrap">
+    <div><div class="eyebrow">Lámina 4 · Avisos</div>
+    <h1>Finpro le avisa cuando se mueve el dinero</h1></div>
+    <p class="lead">Cuando entra o sale una transferencia de una cuenta, Finpro <strong>le avisa a la dirección configurada en su Cliente API</strong>, aunque usted no haya hecho nada. Si no hay dirección configurada, el aviso no se envía, pero la transferencia queda en el portal.</p>
+    <div class="figure">
+      <button class="replay" type="button">↻ repetir</button>
+      <svg viewBox="0 0 900 300" role="img" aria-label="Una transferencia entra a la cuenta y Finpro avisa al sistema del cliente; luego sale otra y avisa por la segunda URL">
+        <defs><marker id="arg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--green)"/></marker></defs>
+        <!-- origen externo de la transferencia entrante -->
+        <g data-step style="--s:1">
+          <rect x="30" y="20" width="150" height="48" rx="10" class="chip"/>
+          <text x="105" y="40" text-anchor="middle" class="t-muted">otro banco / billetera</text>
+          <text x="105" y="58" text-anchor="middle" class="t-mono">transferencia entrante</text>
+        </g>
+        <path d="M105 68 V110" class="ln draw" pathLength="1" style="--s:2"/>
+        <circle r="7" class="dot-a glow" data-flow data-at="2" data-dur=".9" data-path="M105 68 V112"/>
+        <g data-step style="--s:0">
+          <rect x="30" y="112" width="260" height="100" rx="12" class="box pulse" style="--s:4"/>
+          <text x="160" y="150" text-anchor="middle" class="t-title">CVU/Cuenta Finpro</text>
+          <text x="160" y="174" text-anchor="middle" class="t-mono">CVU/CBU · ID Finpro</text>
+          <text x="160" y="194" text-anchor="middle" class="t-muted">entró / salió una transferencia</text>
+        </g>
+        <!-- destino externo de la saliente -->
+        <g data-step style="--s:8">
+          <rect x="30" y="248" width="150" height="48" rx="10" class="chip"/>
+          <text x="105" y="268" text-anchor="middle" class="t-muted">otro banco / billetera</text>
+          <text x="105" y="286" text-anchor="middle" class="t-mono">transferencia saliente</text>
+        </g>
+        <path d="M105 212 V246" class="ln draw" pathLength="1" style="--s:9"/>
+        <circle r="7" class="dot-a glow" data-flow data-at="9" data-dur=".9" data-path="M105 210 V246"/>
+        <!-- avisos -->
+        <path d="M290 142 C 420 142, 460 90, 600 90" class="ln-g draw" pathLength="1" style="--s:4" marker-end="url(#arg)"/>
+        <g data-step style="--s:5"><rect x="360" y="74" width="190" height="26" rx="13" class="chip"/><text x="455" y="91" text-anchor="middle" class="t-green">entrantes → URL 1</text></g>
+        <circle r="6" class="dot-g glow" data-flow data-at="5" data-dur="1.4" data-path="M290 142 C 420 142, 460 90, 600 90" data-repeat="indefinite" data-gap="3.2"/>
+        <path d="M290 182 C 420 182, 460 230, 600 230" class="ln-g draw" pathLength="1" style="--s:10" marker-end="url(#arg)"/>
+        <g data-step style="--s:11"><rect x="360" y="216" width="190" height="26" rx="13" class="chip"/><text x="455" y="233" text-anchor="middle" class="t-green">salientes → URL 2</text></g>
+        <circle r="6" class="dot-g glow" data-flow data-at="11" data-dur="1.4" data-path="M290 182 C 420 182, 460 230, 600 230" data-repeat="indefinite" data-gap="3.2"/>
+        <g data-step style="--s:3">
+          <rect x="610" y="50" width="260" height="210" rx="12" class="box-acc"/>
+          <text x="740" y="140" text-anchor="middle" class="t-title">Su sistema</text>
+          <text x="740" y="164" text-anchor="middle" class="t-mono">recibe el aviso con la cuenta</text>
+          <text x="740" y="182" text-anchor="middle" class="t-mono">identificada por CVU/CBU e ID</text>
+        </g>
+      </svg>
+    </div>
+    <div class="dev"><span class="tag">Para desarrollo</span>
+      <p>Las notificaciones salen hacia <code>dos URLs separadas</code> que usted configura por Cliente API, una para transferencias entrantes y otra para salientes, y aplican a todas sus cuentas asociadas. Cada aviso identifica la cuenta por CVU/CBU y por ID interno.</p></div>
+  </div>
+</section>
+
+<!-- L5 -->
+<section class="slide">
+  <div class="wrap">
+    <div><div class="eyebrow">Lámina 5 · Datos</div>
+    <h1>Guardamos la transferencia, no a la persona</h1></div>
+    <p class="lead">De cada transferencia, Finpro conserva <strong>lo que figura en ella</strong>. No arma una ficha de quien transfirió: solo queda lo que trae la transferencia.</p>
+    <div class="figure">
+      <button class="replay" type="button">↻ repetir</button>
+      <svg viewBox="0 0 900 270" role="img" aria-label="Comprobante de transferencia con los seis datos que Finpro conserva; esos mismos datos viajan en el aviso al sistema del cliente">
+        <defs><marker id="arg2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--green)"/></marker></defs>
+        <g data-step style="--s:0">
+          <rect x="30" y="16" width="500" height="218" rx="12" class="box"/>
+          <text x="280" y="44" text-anchor="middle" class="t-title">Transferencia</text>
+          <line x1="54" y1="58" x2="506" y2="58" class="ln"/>
+        </g>
+        <g data-step style="--s:1"><rect x="54" y="70" width="216" height="40" rx="8" class="hl"/><text x="66" y="86" class="t-mono">origen</text><text x="66" y="102" class="t-green">CVU/CBU</text></g>
+        <g data-step style="--s:2"><rect x="290" y="70" width="216" height="40" rx="8" class="hl"/><text x="302" y="86" class="t-mono">destino</text><text x="302" y="102" class="t-green">CVU/CBU</text></g>
+        <g data-step style="--s:3"><rect x="54" y="120" width="216" height="40" rx="8" class="hl"/><text x="66" y="136" class="t-mono">titular</text><text x="66" y="152" class="t-green">tal como figura</text></g>
+        <g data-step style="--s:4"><rect x="290" y="120" width="216" height="40" rx="8" class="hl"/><text x="302" y="136" class="t-mono">identificación</text><text x="302" y="152" class="t-green">CUIT/CUIL</text></g>
+        <g data-step style="--s:5"><rect x="54" y="170" width="104" height="40" rx="8" class="hl"/><text x="66" y="186" class="t-mono">importe</text><text x="66" y="202" class="t-green">$</text></g>
+        <g data-step style="--s:6"><rect x="166" y="170" width="104" height="40" rx="8" class="hl"/><text x="178" y="186" class="t-mono">fecha</text><text x="178" y="202" class="t-green">dd/mm/aaaa</text></g>
+        <g data-step style="--s:7"><rect x="290" y="170" width="216" height="40" rx="8" class="hl"/><text x="302" y="186" class="t-mono">concepto</text><text x="302" y="202" class="t-green">referencia</text></g>
+        <text x="280" y="256" text-anchor="middle" class="t-muted" data-step style="--s:8">esto es lo que queda en Finpro</text>
+        <!-- los mismos datos viajan en el aviso -->
+        <path d="M530 125 H 640" class="ln-g draw" pathLength="1" style="--s:9" marker-end="url(#arg2)"/>
+        <text x="585" y="112" text-anchor="middle" class="t-green" data-step style="--s:9">en el aviso</text>
+        <circle r="6" class="dot-g glow" data-flow data-at="10" data-dur="1.2" data-path="M530 125 H 640" data-repeat="indefinite" data-gap="2.4"/>
+        <g data-step style="--s:9">
+          <rect x="650" y="70" width="220" height="110" rx="12" class="box-acc"/>
+          <text x="760" y="112" text-anchor="middle" class="t-title">Su sistema</text>
+          <text x="760" y="136" text-anchor="middle" class="t-mono">recibe los mismos datos</text>
+          <text x="760" y="154" text-anchor="middle" class="t-mono">desde ahí, la custodia es suya</text>
+        </g>
+      </svg>
+    </div>
+    <ul class="fields">
+      <li>CVU/CBU origen y destino</li><li>titular tal como figura</li><li>CUIT/CUIL</li><li>importe</li><li>fecha</li><li>concepto / referencia</li>
+    </ul>
+    <div class="dev"><span class="tag">Para desarrollo</span>
+      <p>Por cada transferencia se registran los datos que figuran en ella y no otros datos de la persona que transfiere. Esos mismos datos viajan en el aviso, y desde su recepción la custodia es suya.</p></div>
+    <p class="ref">Autenticación, formato de los avisos y reintentos: ver documentación de la API.</p>
+  </div>
+</section>
+
+</main>
+
+<nav class="nav" aria-label="Navegación de láminas">
+  <button id="prev" type="button">← Anterior</button>
+  <div class="dots" id="dots"></div>
+  <button id="next" type="button">Siguiente →</button>
+  <span class="hint">← → o barra espaciadora · R repite la animación</span>
+</nav>
+
+<script>
+(function(){
+  var slides=[].slice.call(document.querySelectorAll('.slide')), i=0;
+  var dots=document.getElementById('dots'), cur=document.getElementById('cur');
+  var prev=document.getElementById('prev'), next=document.getElementById('next');
+  var STEP=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--step'))*1000||420;
+  var reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var timers=[];
+
+  /* Puntos que viajan: cada <circle data-flow> recibe un animateMotion construido desde su data-path */
+  [].forEach.call(document.querySelectorAll('[data-flow]'),function(dot){
+    var am=document.createElementNS('http://www.w3.org/2000/svg','animateMotion');
+    am.setAttribute('dur',dot.dataset.dur+'s');
+    am.setAttribute('path',dot.dataset.path);
+    am.setAttribute('begin','indefinite');
+    am.setAttribute('fill','freeze');
+    am.setAttribute('calcMode','spline');am.setAttribute('keyTimes','0;1');am.setAttribute('keySplines','.4 0 .2 1');
+    if(dot.dataset.repeat){am.setAttribute('repeatCount','indefinite')}
+    dot.appendChild(am);
+    dot._am=am;
+  });
+
+  function stopFlows(slide){
+    [].forEach.call(slide.querySelectorAll('[data-flow]'),function(dot){
+      try{dot._am.endElement()}catch(e){}
+      dot.style.opacity='';
+      dot.setAttribute('transform','');
+    });
+  }
+  function play(slide){
+    timers.forEach(clearTimeout);timers=[];
+    slide.classList.remove('play');stopFlows(slide);
+    if(reduced){slide.classList.add('play');return}
+    void slide.offsetWidth; // reinicia las animaciones CSS
+    slide.classList.add('play');
+    [].forEach.call(slide.querySelectorAll('[data-flow]'),function(dot){
+      var at=parseFloat(dot.dataset.at||0)*STEP;
+      var start=function(){dot.style.opacity='1';try{dot._am.beginElement()}catch(e){}};
+      timers.push(setTimeout(start,at));
+      // un punto que viaja una sola vez se apaga al llegar
+      if(!dot.dataset.repeat){timers.push(setTimeout(function(){dot.style.opacity='0'},at+parseFloat(dot.dataset.dur)*1000+150))}
+    });
+  }
+
+  slides.forEach(function(s,k){
+    var b=document.createElement('button');b.type='button';b.setAttribute('aria-label','Lámina '+(k+1));b.addEventListener('click',function(){go(k)});dots.appendChild(b);
+    var r=s.querySelector('.replay'); if(r) r.addEventListener('click',function(){play(s)});
+  });
+  function go(n){
+    if(n<0||n>=slides.length)return;
+    slides.forEach(function(s,k){
+      var on=k===n;
+      s.classList.toggle('active',on);s.classList.toggle('prev',k<n);
+      if(on){s.scrollTop=0;play(s)}else{s.classList.remove('play');stopFlows(s)}
+    });
+    i=n;cur.textContent=n+1;
+    [].forEach.call(dots.children,function(d,k){d.classList.toggle('on',k===n)});
+    prev.disabled=n===0;next.disabled=n===slides.length-1;
+  }
+  prev.addEventListener('click',function(){go(i-1)});
+  next.addEventListener('click',function(){go(i+1)});
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();go(i+1)}
+    if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();go(i-1)}
+    if(e.key==='Home')go(0); if(e.key==='End')go(slides.length-1);
+    if(e.key==='r'||e.key==='R')play(slides[i]);
+  });
+  var x0=null;
+  document.getElementById('deck').addEventListener('touchstart',function(e){x0=e.touches[0].clientX},{passive:true});
+  document.getElementById('deck').addEventListener('touchend',function(e){if(x0===null)return;var dx=e.changedTouches[0].clientX-x0;if(Math.abs(dx)>50)go(dx<0?i+1:i-1);x0=null});
+  var h=parseInt((location.hash||'').replace('#l',''),10); go(h>=1&&h<=slides.length?h-1:0);
+})();
+</script>
+
+</body></html>
